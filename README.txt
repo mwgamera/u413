@@ -30,7 +30,7 @@ Boards:
 	8 -- Literature
 	9 -- Math
 	10 -- Science/skepticism
-	11 -- Foreign
+	11 -- International
 	12 -- Misc
 	13 -- Test
 	20 -- Brony (20% cooler)*
