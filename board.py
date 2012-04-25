@@ -22,6 +22,9 @@ import math
 import util
 
 def output_board(board,page,u413):
+	if board==403:
+		u413.type("Access denied.")
+		return
 	output=''
 	if board==0:
 		u413.type("Retrieving all topics...")
@@ -32,19 +35,28 @@ def output_board(board,page,u413):
 			page=math.ceil(c/10.0)
 		t=db.query("SELECT *,id AS t FROM posts WHERE topic=TRUE AND parent IN (SELECT id FROM boards WHERE onall=TRUE) ORDER BY (SELECT MAX(posted) FROM posts WHERE topic=FALSE AND parent=t OR topic=TRUE AND id=t) DESC LIMIT %i,10;"%((page-1)*10))[::-1]
 		if c==0:
-			output+='{0} <span class="inverted">BOARD ALL</span> Page %i/1<br/>'%page
+			output+='{{<span class="transmit" data-transmit="BOARD 0">0</span>}} <span class="inverted">BOARD ALL</span> Page {0}/1<br/>'.format(page)
 		else:
-			output+='{0} <span class="inverted">BOARD ALL</span> Page %i/%i<br/>'%(page,math.ceil(c/10.0))
+			output+='{{<span class="transmit" data-transmit="BOARD 0">0</span>}} <span class="inverted">BOARD ALL</span> Page {0}/{1}<br/>'.format(page,math.ceil(c/10.0))
 		output+='<table>'
 		for topic in t:
 			r=int(db.query("SELECT COUNT(*) FROM posts WHERE parent=%i AND topic=FALSE;"%int(topic["id"]))[0]["COUNT(*)"])
-			last=''
-			if r!=0:
-				last=db.query("SELECT owner,posted FROM posts WHERE parent=%i AND topic=FALSE ORDER BY posted DESC LIMIT 1;"%int(topic["id"]))[0]
-				lastu=db.query("SELECT username FROM users WHERE id=%i;"%int(last["owner"]))[0]["username"]
-				last=' | last reply by %s %s'%(lastu,util.ago(last["posted"]))
-			u=db.query("SELECT username FROM users WHERE id=%i;"%int(topic["owner"]))[0]["username"]
-			output+='<tr><td style="text-align:right;width:64px;">{%i}</td><td style="padding-left:8px;"><b>%s</b> <span class="dim">by %s %s</span><br/><span class="dim">%i replies%s</span><br/></td></tr>'%(int(topic["id"]),topic["title"],u,util.ago(topic["posted"]),r,last)
+			if topic["parent"]=='4':
+				last=''
+				anons=db.query("SELECT DISTINCT owner FROM (SELECT owner,posted FROM (SELECT owner,posted FROM posts WHERE topic=FALSE AND parent=%i) AS t1 GROUP BY owner ORDER BY posted) AS t2;"%int(topic["id"]))
+				if r!=0:
+					last=db.query("SELECT owner,posted FROM posts WHERE parent=%i AND topic=FALSE ORDER BY posted DESC LIMIT 1;"%int(topic["id"]))[0]
+					lastu=util.anoncode(anons,last["owner"],topic["owner"])
+					last=' | last reply by {0} {1}'.format(lastu,util.ago(last["posted"]))
+				output+='<tr><td>{{<span class="transmit" data-transmit="BOARD {0}">{0}</span>}}</td><td style="text-align:right;width:64px;">{{<span class="transmit" data-transmit="TOPIC {1}">{1}</span>}}</td><td style="padding-left:8px;"><b>{2}</b> <span class="dim">by OP {3}</span><br/><span class="dim">{4} replies{5}</span><br/></td></tr>'.format(topic["parent"],topic["id"],topic["title"],util.ago(topic["posted"]),r,last)
+			else:
+				last=''
+				if r!=0:
+					last=db.query("SELECT owner,posted FROM posts WHERE parent=%i AND topic=FALSE ORDER BY posted DESC LIMIT 1;"%int(topic["id"]))[0]
+					lastu=db.query("SELECT username FROM users WHERE id=%i;"%int(last["owner"]))[0]["username"]
+					last=' | last reply by <span class="transmit" data-transmit="WHOIS {0}">{0}</span> {1}'.format(lastu,util.ago(last["posted"]))
+				u=db.query("SELECT username FROM users WHERE id=%i;"%int(topic["owner"]))[0]["username"]
+				output+='<tr><td>{{<span class="transmit" data-transmit="BOARD {0}">{0}</span>}}</td><td style="text-align:right;width:64px;">{{<span class="transmit" data-transmit="TOPIC {1}">{1}</span>}}</td><td style="padding-left:8px;"><b>{2}</b> <span class="dim">by <span class="transmit" data-transmit="WHOIS {3}">{3}</span> {4}</span><br/><span class="dim">{5} replies{6}</span><br/></td></tr>'.format(topic["parent"],topic["id"],topic["title"],u,util.ago(topic["posted"]),r,last)
 		if page==1:
 			u413.set_context("BOARD ALL")
 		else:
@@ -64,19 +76,27 @@ def output_board(board,page,u413):
 		t=db.query("SELECT *,id as t FROM posts WHERE topic=TRUE AND parent=%i ORDER BY (SELECT MAX(posted) FROM posts WHERE topic=FALSE AND parent=t OR topic=TRUE AND id=t) ASC LIMIT %i,10;"%(board,(page-1)*10))
 		u413.type("Retrieving board topics...")
 		if c==0:
-			output+='{%i} <span class="inverted">%s</span> Page %i/1<br/>'%(board,b["name"],page)
+			output+='{{<span class="transmit" data-transmit="BOARD {0}">{0}</span>}} <span class="inverted">{1}</span> Page {2}/1<br/>'.format(board,b["name"],page)
 		else:
-			output+='{%i} <span class="inverted">%s</span> Page %i/%i<br/>'%(board,b["name"],page,math.ceil(c/10.0))
+			output+='{{<span class="transmit" data-transmit="BOARD {0}">{0}</span>}} <span class="inverted">{1}</span> Page {2}/{3}<br/>'.format(board,b["name"],page,int(math.ceil(c/10.0)))
 		output+='<table>'
-		for topic in t:
-			r=int(db.query("SELECT COUNT(*) FROM posts WHERE parent=%i AND topic=FALSE;"%int(topic["id"]))[0]["COUNT(*)"])
-			last=''
-			if r!=0:
-				last=db.query("SELECT owner,posted FROM posts WHERE parent=%i AND topic=FALSE ORDER BY posted DESC LIMIT 1;"%int(topic["id"]))[0]
-				lastu=db.query("SELECT username FROM users WHERE id=%i;"%int(last["owner"]))[0]["username"]
-				last=' | last reply by %s %s'%(lastu,util.ago(last["posted"]))
-			u=db.query("SELECT username FROM users WHERE id=%i;"%int(topic["owner"]))[0]["username"]
-			output+='<tr><td style="text-align:right;width:64px;">{%i}</td><td style="padding-left:8px;"><b>%s</b> <span class="dim">by %s %s</span><br/><span class="dim">%i replies%s</span><br/></td></tr>'%(int(topic["id"]),topic["title"],u,util.ago(topic["posted"]),r,last)
+		if board==4:
+			for topic in t:
+				r=int(db.query("SELECT COUNT(*) FROM posts WHERE parent=%i AND topic=FALSE;"%int(topic["id"]))[0]["COUNT(*)"])
+				if r!=0:
+					last=db.query("SELECT MAX(posted) AS posted FROM posts WHERE parent=%i AND topic=FALSE;"%int(topic["id"]))[0]
+					last=' | last reply %s'%util.ago(last["posted"])
+				output+='<tr><td style="text-align:right;width:64px;">{{<span class="transmit" data-transmit="TOPIC {0}">{0}</span>}}</td><td style="padding-left:8px;"><b>{1}</b> <span class="dim">by OP {2}</span><br/><span class="dim">{3} replies{4}</span><br/></td></tr>'.format(int(topic["id"]),topic["title"],util.ago(topic["posted"]),r,last)
+		else:
+			for topic in t:
+				r=int(db.query("SELECT COUNT(*) FROM posts WHERE parent=%i AND topic=FALSE;"%int(topic["id"]))[0]["COUNT(*)"])
+				last=''
+				if r!=0:
+					last=db.query("SELECT MAX(posted) AS posted,owner FROM posts WHERE parent=%i AND topic=FALSE;"%int(topic["id"]))[0]
+					lastu=db.query("SELECT username FROM users WHERE id=%i;"%int(last["owner"]))[0]["username"]
+					last=' | last reply by <span class="transmit" data-transmit="WHOIS {0}">{0}</span> {1}'.format(lastu,util.ago(last["posted"]))
+				u=db.query("SELECT username FROM users WHERE id=%i;"%int(topic["owner"]))[0]["username"]
+				output+='<tr><td style="text-align:right;width:64px;">{{<span class="transmit" data-transmit="TOPIC {0}">{0}</span>}}</td><td style="padding-left:8px;"><b>{1}</b> <span class="dim">by <span class="transmit" data-transmit="WHOIS {2}">{2}</span> {3}</span><br/><span class="dim">{4} replies{5}</span><br/></td></tr>'.format(int(topic["id"]),topic["title"],u,util.ago(topic["posted"]),r,last)
 		if page==1:
 			u413.set_context("BOARD %i"%board)
 		else:
@@ -89,7 +109,7 @@ def output_board(board,page,u413):
 def board_func(args,u413):
 	args=args.split(' ')
 	if len(args)==0:
-		u413.donttype('Invalid board ID.')
+		u413.type('Invalid board ID.')
 	#BOARD id
 	elif len(args)==1:
 		if args[0].upper()=="ALL":
@@ -97,7 +117,7 @@ def board_func(args,u413):
 		if util.isint(args[0]):
 			output_board(int(args[0]),1,u413)
 		else:
-			u413.donttype('<span class="error">Invalid board ID</span>')
+			u413.type('Invalid board ID.')
 	#BOARD id page
 	else:
 		if args[0].upper()=="ALL":

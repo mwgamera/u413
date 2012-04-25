@@ -52,7 +52,43 @@ def ago(t):
 		if int(dif/60/60/24/365)==1:
 			return '1 year ago'
 		else:
-			return str(int(dif/60/60/24/365))+' year ago'
+			return str(int(dif/60/60/24/365))+' years ago'
+
+def until(t):
+	if type(t)==float:
+		t=int(t)
+	if type(t)!=int:
+		t=int(time.mktime(time.strptime(t,'%Y-%m-%d %H:%M:%S')))
+	dif=t-time.time()
+	if dif<1:
+		return "in a moment"
+	elif dif<60:
+		return str(int(dif))+' seconds from now'
+	elif dif<60*60:
+		if int(dif/60)==1:
+			return '1 minute from now'
+		else:
+			return str(int(dif/60))+' minutes from now'
+	elif dif<60*60*24:
+		if int(dif/60/60)==1:
+			return '1 hour from now'
+		else:
+			return str(int(dif/60/60))+' hours from now'
+	elif dif<60*60*24*7:
+		if int(dif/60/60/24)==1:
+			return '1 day from now'
+		else:
+			return str(int(dif/60/60/24))+' days from now'
+	elif dif<60*60*24*365:
+		if int(dif/60/60/24/7)==1:
+			return '1 week ago'
+		else:
+			return str(int(dif/60/60/24/7))+' weeks from now'
+	else:
+		if int(dif/60/60/24/365)==1:
+			return '1 year from now'
+		else:
+			return str(int(dif/60/60/24/365))+' years from now'
 
 def isint(i):
 	try:
@@ -75,3 +111,23 @@ def stripctrl(i):
 		# ascii control characters
 		i=re.sub(r"[\x01-\x1F\x7F]","",i)
 	return i
+
+def anoncode(anons,owner,op):
+	owner=int(owner)
+	op=int(op)
+	if owner==op:
+		return 'OP'
+	offset=0
+	for i in range(len(anons)):
+		if int(anons[i]["owner"])==owner:
+			offset=i
+			break
+	if offset==0:
+		return 'A'
+	if offset==379:#OP magic number, skip and go to OQ
+		offset+=1
+	name=''
+	while offset>0:
+		name+=chr(ord('A')+offset%26)
+		offset/=26
+	return name
